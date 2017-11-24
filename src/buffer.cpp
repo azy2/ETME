@@ -1,6 +1,14 @@
 #include "buffer.h"
+#include <cstdlib>
 
-class file_char_prod : public char_producer<wchar_t> {
+using namespace std;
+
+Buffer::Buffer() : cursor(0, 0) {
+    rope = new crope();
+}
+
+// TODO: Better error handeling
+class file_char_prod : public char_producer<char> {
 public:
     FILE* f;
     file_char_prod(const char* file_name) {
@@ -10,7 +18,7 @@ public:
 
     ~file_char_prod() { fclose(f); }
 
-    virtual void operator()(size_t start_pos, size_t len, wchar_t* buffer) {
+    virtual void operator()(size_t start_pos, size_t len, char* buffer) {
         if (fseek(f, start_pos, SEEK_SET)) exit(1);
         if (fread(buffer, sizeof(char), len, f) < len) exit(1);
     }
@@ -21,23 +29,78 @@ public:
     }
 };
 
-buffer_actor::behavior_type buffer_actor_fun(buffer_actor::stateful_pointer<buffer_state> self) {
-    return {
-        [=](insert_atom, size_t pos, wchar_t c) {
-            self->state.r.insert(pos, c);
-        },
-            [=](erase_atom, size_t i, size_t n) {
-                self->state.r.erase(i, n);
-            },
-                [=](open_file_atom, std::string filename) {
-                    file_char_prod* fcp = new file_char_prod(filename.c_str());
-                    self->state.r = rope<wchar_t>(fcp, fcp->len(), true);
-                    return true;
-                },
+Buffer::Buffer(const char* filename) : cursor(58, 58) {
+    file_char_prod *fcp = new file_char_prod(filename);
+    rope = new crope(fcp, fcp->len(), true);
+}
 
-                    [=](copy_atom, size_t pos, size_t n, wchar_t* buf) {
-                        self->state.r.copy(pos, n, buf);
-                        return true;
-                    }
-    };
+crope::const_iterator Buffer::begin() {
+    return rope->begin();
+}
+
+size_t Buffer::length() {
+    return rope->length();
+}
+
+void Buffer::erase(size_t i, size_t n) {
+    rope->erase(i, n);
+}
+
+void Buffer::backspace() {
+    if (cursor.isRegion()) {
+        erase(min(cursor.start, cursor.end), abs((int)cursor.start - (int)cursor.end));
+        cursor.start = cursor.end = min(cursor.start, cursor.end);
+    } else if (cursor.start > 0) {
+        erase(cursor.start - 1, 1);
+        --cursor.start;
+        --cursor.end;
+    }
+}
+
+void Buffer::insert(char ch) {
+    if (cursor.isRegion()) {
+        erase(min(cursor.start, cursor.end), abs((int)cursor.start - (int)cursor.end));
+        cursor.start = cursor.end = min(cursor.start, cursor.end);
+    }
+    rope->insert(cursor.start, ch);
+    ++cursor.start;
+    ++cursor.end;
+}
+
+char Buffer::cur() {
+    return rope->at(cursor.start);
+}
+
+char Buffer::before() {
+    return rope->at(cursor.start - 1);
+}
+
+char Buffer::next() {
+    return rope->at(cursor.start + 1);
+}
+
+void Buffer::right(int n) {
+    if (cursor.isRegion()) {
+        if (cursor.end < this->length()) {
+            cursor.end += n;
+        }
+    } else {
+        if (cursor.start < this->length()) {
+            cursor.start += n;
+            cursor.end += n;
+        }
+    }
+}
+
+void Buffer::left(int n) {
+    if (cursor.isRegion()) {
+        if (cursor.end > 0) {
+            cursor.end -= n;
+        }
+    } else {
+        if (cursor.start > 0) {
+            cursor.start -= n;
+            cursor.end -= n;
+        }
+    }
 }

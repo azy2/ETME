@@ -1,27 +1,33 @@
-#pragma once
+#ifndef BUFFER_H_
+#define BUFFER_H_
 
 #include <ext/rope>
-#include <string>
-
-#include "caf/all.hpp"
+#include <vector>
+#include "cursor.h"
 
 using namespace __gnu_cxx;
-using namespace caf;
 
-using insert_atom = atom_constant<atom("insert")>;
-using erase_atom = atom_constant<atom("erase")>;
-using open_file_atom = atom_constant<atom("open_file")>;
-using copy_atom = atom_constant<atom("copy")>;
+class Buffer {
+private:
+    crope *rope;
 
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(wrope::const_iterator);
+    void erase(size_t i, size_t n);
 
-using buffer_actor = typed_actor<reacts_to<insert_atom, size_t, wchar_t>,
-                                 reacts_to<erase_atom, size_t, size_t>,
-                                 replies_to<open_file_atom, std::string>::with<bool>,
-                                 replies_to<copy_atom, size_t, size_t, wchar_t*>::with<bool>>;
+public:
+    Buffer();
+    Buffer(const char* filename);
 
-struct buffer_state {
-    wrope r;
+    crope::const_iterator begin();
+    size_t length();
+    void backspace();
+    void insert(char ch);
+    char cur();
+    char before();
+    char next();
+    void right(int n = 1);
+    void left(int n = 1);
+
+    Cursor cursor;
 };
 
-buffer_actor::behavior_type buffer_actor_fun(buffer_actor::stateful_pointer<buffer_state> self);
+#endif

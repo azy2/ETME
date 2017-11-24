@@ -1,25 +1,18 @@
-/******************************************************************************\
- * This example is a very basic, non-interactive math service implemented     *
- * for both the blocking and the event-based API.                             *
-\******************************************************************************/
-
-#include "buffer.h"
 #include "io.h"
+#include "buffer.h"
+#include <ext/rope>
 
-int main() {
-    actor_system_config cfg;
-    actor_system system{cfg};
-    buffer_actor buffer = system.spawn(buffer_actor_fun);
-    scoped_actor self{system};
+using namespace __gnu_cxx;
 
-    self->request(buffer, infinite, open_file_atom::value, "temp").receive(
-        [&](bool b) {
-            if (b)
-                io_loop(self, buffer);
-        },
-        [&](const error& err) {
-            exit(1);
-        });
+int main(int argc, char** argv) {
+    Buffer *buffer;
+    if (argc == 2) {
+        buffer = new Buffer(argv[1]);
+    } else {
+        buffer = new Buffer();
+    }
+    IO io(buffer);
+    io.io_loop();
 
     return 0;
 }
