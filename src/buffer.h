@@ -15,7 +15,7 @@ private:
 
 public:
     Buffer();
-    Buffer(const char* filename);
+    explicit Buffer(const char* filename);
 
     crope::const_iterator begin();
     size_t length();
@@ -24,8 +24,8 @@ public:
     char cur();
     char before();
     char next();
-    void right(int n = 1);
-    void left(int n = 1);
+    void right(size_t n = 1);
+    void left(size_t n = 1);
 
     Cursor cursor;
 };

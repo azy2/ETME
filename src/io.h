@@ -4,6 +4,7 @@
 #include <ext/rope>
 #include <vector>
 #include <utility>
+#include <optional>
 #include "buffer.h"
 
 class LinePos {
@@ -31,15 +32,6 @@ public:
         operator--();
         return tmp;
     }
-    // LinePos& operator+=(int n) {
-    //     x += n;
-    //     i += n;
-    //     return *this;
-    // }
-    // friend LinePos operator+(LinePos lhs, const LinePos& rhs) {
-    //     lhs += rhs.x;
-    //     return lhs;
-    // }
 };
 
 class LinePositions {
@@ -58,14 +50,14 @@ public:
         return lines[idx];
     }
 
-    void inc(int idx) {
+    void inc(size_t idx) {
         auto s = lines.begin() + idx;
         (*s)++;
         for (auto l = s + 1; l != lines.end(); ++l) {
             l->i++;
         }
     }
-    void dec(int idx) {
+    void dec(size_t idx) {
         auto s = lines.begin() + idx;
         (*s)--;
         for (auto l = s + 1; l != lines.end(); ++l) {
@@ -83,7 +75,7 @@ public:
     }
 
     void erase(size_t idx) {
-        int x = lines[idx].x;
+        size_t x = lines[idx].x;
         lines.erase(lines.begin() + idx);
         for (auto l = lines.begin() + idx; l != lines.end(); ++l) {
             l->i -= x;
@@ -99,11 +91,14 @@ public:
 
 class IO {
 public:
-    IO(Buffer* buffer) : buffer(buffer) {};
-    void io_loop();
-private:
-    void initialize_display();
-    void draw_buffer();
+    explicit IO(Buffer* buffer);
+    void right();
+    void left();
+    void up();
+    void down();
+    void ins(char c);
+    std::optional<size_t> backspace();
+
     LinePositions visible_lines;
 
     Buffer* buffer;

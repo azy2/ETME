@@ -1,4 +1,4 @@
-Extensible Text Management Engine
+Extensible Text Manipulation Engine
 =================================
 
 Major Goals
