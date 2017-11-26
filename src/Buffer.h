@@ -3,7 +3,7 @@
 
 #include <ext/rope>
 #include <vector>
-#include "cursor.h"
+#include "Cursor.h"
 
 using namespace __gnu_cxx;
 
@@ -18,6 +18,7 @@ public:
     explicit Buffer(const char* filename);
 
     crope::const_iterator begin();
+    crope::const_iterator end();
     size_t length();
     void backspace();
     void insert(char ch);
@@ -28,6 +29,7 @@ public:
     void left(size_t n = 1);
 
     Cursor cursor;
+    const char* filename;
 };
 
 #endif

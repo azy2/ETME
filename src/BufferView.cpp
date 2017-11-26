@@ -1,10 +1,10 @@
-#include "io.h"
+#include "BufferView.h"
 
-IO::IO(Buffer* buffer) : buffer(buffer) {
+BufferView::BufferView(Buffer* buffer) : buffer(buffer) {
     height = width = y = x = 0;
 }
 
-void IO::right() {
+void BufferView::right() {
     if (buffer->cur() == '\n') {
         ++y;
         x = 0;
@@ -14,7 +14,7 @@ void IO::right() {
     buffer->right();
 }
 
-void IO::left() {
+void BufferView::left() {
     if (x == 0 && y > 0) {
         --y;
         x = visible_lines[y].x;
@@ -24,7 +24,7 @@ void IO::left() {
     buffer->left();
 }
 
-void IO::up() {
+void BufferView::up() {
     if (visible_lines[y - 1].x < x) {
         buffer->left(x + 1);
         --y;
@@ -35,7 +35,7 @@ void IO::up() {
     }
 }
 
-void IO::down() {
+void BufferView::down() {
     if (visible_lines[y+1].x < x) {
         buffer->right(visible_lines[y + 1].x + (visible_lines[y].x - x) + 1);
         ++y;
@@ -46,25 +46,25 @@ void IO::down() {
     }
 }
 
-void IO::ins(char c) {
+void BufferView::ins(char c) {
     ++x;
     visible_lines.inc(y);
     buffer->insert(c);
 }
 
-std::optional<size_t> IO::backspace() {
+Optional<size_t> BufferView::backspace() {
     buffer->backspace();
     if (x != 0) {
         --x;
         visible_lines.dec(y);
-        return {};
+        return Optional<size_t>();
     } else if (x == 0 && y > 0) {
         --y;
         x = visible_lines[y].x;
         size_t it_start = visible_lines[y].i - 1;
         visible_lines.add(y, visible_lines[y+1].x);
         visible_lines.erase(y + 1);
-        return std::optional<size_t>{it_start};
+        return Optional<size_t>(it_start);
     }
     return {};
 }

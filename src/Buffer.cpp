@@ -1,9 +1,8 @@
-#include "buffer.h"
-#include <cstdlib>
+#include "Buffer.h"
 
 using namespace std;
 
-Buffer::Buffer() : cursor(0, 0) {
+Buffer::Buffer() : cursor(0, 0), filename("*scratch*") {
     rope = new crope();
 }
 
@@ -30,7 +29,7 @@ public:
     }
 };
 
-Buffer::Buffer(const char* filename) : cursor(58, 58) {
+Buffer::Buffer(const char* filename) : cursor(58, 58), filename(filename) {
     auto *fcp = new file_char_prod(filename);
     rope = new crope(fcp, fcp->len(), true);
 }
@@ -104,4 +103,8 @@ void Buffer::left(size_t n) {
             cursor.end -= n;
         }
     }
+}
+
+crope::const_iterator Buffer::end() {
+    return rope->end();
 }

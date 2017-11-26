@@ -4,8 +4,8 @@
 #include <ext/rope>
 #include <vector>
 #include <utility>
-#include <optional>
-#include "buffer.h"
+#include "Buffer.h"
+#include "Optional.h"
 
 class LinePos {
 public:
@@ -89,15 +89,15 @@ public:
 
 
 
-class IO {
+class BufferView {
 public:
-    explicit IO(Buffer* buffer);
+    explicit BufferView(Buffer* buffer);
     void right();
     void left();
     void up();
     void down();
     void ins(char c);
-    std::optional<size_t> backspace();
+    Optional<size_t> backspace();
 
     LinePositions visible_lines;
 

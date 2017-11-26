@@ -1,1 +1,6 @@
--std=gnu++17 -g -Wextra -pedantic -Werror -Wall
+-std=c++17
+-Wextra
+-pedantic
+-Werror
+-Wall
+-lcurses
