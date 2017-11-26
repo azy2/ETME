@@ -1,4 +1,4 @@
-#include "BufferView.h"
+#include "../include/BufferView.h"
 
 BufferView::BufferView(Buffer* buffer) : buffer(buffer) {
     height = width = y = x = 0;

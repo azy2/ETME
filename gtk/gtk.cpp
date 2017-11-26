@@ -1,7 +1,9 @@
 #include <gtkmm.h>
-#include "../src/BufferView.h"
+#include <ext/rope>
+#include "BufferView.h"
 
 using namespace std;
+using __gnu_cxx::crope;
 
 class TextArea : public Gtk::DrawingArea {
     typedef Gtk::DrawingArea super;
@@ -62,27 +64,35 @@ protected:
         bufferView->width = static_cast<size_t>(widgetWidth / textWidth);
         lines.erase(lines.begin(), lines.end());
 
-        auto it = bufferView->buffer->begin();
-        auto end = bufferView->buffer->end();
-        size_t x = 0, i = 0;
-        for (size_t y = 0; y < bufferView->height && it != end; ++y) {
-            Glib::ustring lineText;
-            while (it != end && *it != '\n') {
-                if (i == bufferView->buffer->cursor.start) {
-                    bufferView->y = y;
-                    bufferView->x = x;
-                }
-                lineText.push_back(*it);
-                ++x;
-                ++it;
-                ++i;
-            }
-            bufferView->visible_lines.emplace_back(x, i);
-            lines.push_back(create_pango_layout(lineText));
-            ++it;
-            lines[y]->set_font_description(font);
-            x = 0;
+        vector<pair<crope,size_t>> line_data = bufferView->buffer->get_lines(0, bufferView->height);
+        for (const auto& line : line_data) {
+            Glib::ustring text(line.first.c_str());
+            bufferView->visible_lines.emplace_back(line.first.length(), line.second);
+            lines.push_back(create_pango_layout(text));
+            (*(lines.end()-1))->set_font_description(font);
         }
+
+//        auto it = bufferView->buffer->begin();
+//        auto end = bufferView->buffer->end();
+//        size_t x = 0, i = 0;
+//        for (size_t y = 0; y < bufferView->height && it != end; ++y) {
+//            Glib::ustring lineText;
+//            while (it != end && *it != '\n') {
+//                if (i == bufferView->buffer->cursor.start) {
+//                    bufferView->y = y;
+//                    bufferView->x = x;
+//                }
+//                lineText.push_back(*it);
+//                ++x;
+//                ++it;
+//                ++i;
+//            }
+//            bufferView->visible_lines.emplace_back(x, i);
+//            lines.push_back(create_pango_layout(lineText));
+//            ++it;
+//            lines[y]->set_font_description(font);
+//            x = 0;
+//        }
     }
 
     bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr) override {
