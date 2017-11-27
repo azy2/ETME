@@ -71,12 +71,19 @@ void LineBoundaries::update_range(crope::const_iterator begin, crope::const_iter
     }
 }
 
-void LineBoundaries::plus(size_t idx, size_t amt) {
+void LineBoundaries::lengthen(size_t idx, size_t amt) {
     size_t i = idx - offset;
     line_boundaries[i].length += amt;
     for (i = i+1; i < line_boundaries.size(); ++i) {
         line_boundaries[i].start_idx += amt;
     }
+}
+
+void LineBoundaries::insert(size_t pos, size_t length) {
+    LineBoundary lineBoundary = line_boundaries[pos - offset];
+    LineBoundary newBoundary = {lineBoundary.start_idx + lineBoundary.length + 1, 0};
+    line_boundaries.insert(line_boundaries.begin() + pos - offset + 1, newBoundary);
+    lengthen(pos + 1, length);
 }
 
 size_t LineBoundaries::last_index() {
