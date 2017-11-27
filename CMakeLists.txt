@@ -8,8 +8,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wextra -pedantic -Werror -Wall")
 
 set(CORE_INCLUDE_DIR core/include)
-set(CORE_HEADERS core/include/Buffer.h core/include/BufferView.h core/include/Cursor.h core/include/Optional.h)
-set(CORE_SRCS core/src/Buffer.cpp core/src/BufferView.cpp)
+set(CORE_HEADERS core/include/Buffer.h core/include/BufferView.h core/include/Cursor.h core/include/Optional.h core/include/LineBoundaries.h)
+set(CORE_SRCS core/src/Buffer.cpp core/src/BufferView.cpp core/src/LineBoundaries.cpp)
 
 add_library(etme_core ${CORE_SRCS} ${CORE_HEADERS})
 target_include_directories(etme_core PRIVATE ${CORE_INCLUDE_DIR})
