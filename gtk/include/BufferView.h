@@ -17,6 +17,7 @@ protected:
 private:
     Buffer* buffer;
     int widgetWidth, widgetHeight, textWidth, textHeight;
+    size_t num_lines;
     Pango::FontDescription font;
     vector<Glib::RefPtr<Pango::Layout>> lines;
     size_t visible_lines_offset;

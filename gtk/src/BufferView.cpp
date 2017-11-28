@@ -1,3 +1,4 @@
+#include <iostream>
 #include "BufferView.h"
 
 BufferView::BufferView(Buffer* buffer) : buffer(buffer) {
@@ -15,6 +16,7 @@ BufferView::BufferView(Buffer* buffer) : buffer(buffer) {
     textWidth /= Pango::SCALE;
     textHeight /= Pango::SCALE;
     visible_lines_offset = 0;
+    num_lines = 0;
 }
 
 void BufferView::key_press_event(GdkEventKey* event) {
@@ -41,10 +43,10 @@ void BufferView::on_size_allocate(Gtk::Allocation& allocation) {
     widgetWidth = allocation.get_width();
     widgetHeight = allocation.get_height();
 
-    size_t height = static_cast<size_t>(widgetHeight / textHeight);
+    num_lines = static_cast<size_t>(widgetHeight / textHeight) - 1;
     lines.erase(lines.begin(), lines.end());
 
-    vector<Buffer::Line> line_data = buffer->get_lines(visible_lines_offset, height + visible_lines_offset + 1);
+    vector<Buffer::Line> line_data = buffer->get_lines(visible_lines_offset, num_lines + visible_lines_offset + 1);
     for (const auto& line : line_data) {
         Glib::ustring text(line.rope.c_str());
         lines.push_back(create_pango_layout(text));
@@ -74,6 +76,22 @@ bool BufferView::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
                   textHeight);
     cr->fill();
 
+    cr->set_source_rgb(7 / 256.0, 54 / 256.0, 66 / 256.0);
+    cr->rectangle(0, widgetHeight - textHeight, widgetWidth, textHeight);
+    cr->fill();
+
+    cr->set_source_rgb(147 / 256.0, 161 / 256.0, 161 / 256.0);
+    Glib::ustring filename(buffer->filename);
+    auto filename_layout = create_pango_layout(filename);
+    Glib::ustring cursor_pos(to_string(buffer->get_y()) + ":" + to_string(buffer->get_x()));
+    auto cursor_pos_layout = create_pango_layout(cursor_pos);
+    cr->move_to(0, widgetHeight - textHeight);
+    filename_layout->show_in_cairo_context(cr);
+    int cursor_pos_width, cursor_pos_height;
+    cursor_pos_layout->get_size(cursor_pos_width, cursor_pos_height);
+    cr->move_to(widgetWidth - (cursor_pos_width / Pango::SCALE), widgetHeight - textHeight);
+    cursor_pos_layout->show_in_cairo_context(cr);
+
     return true;
 }
 
@@ -93,7 +111,7 @@ void BufferView::up(char c) {
 void BufferView::down(char c) {
     (void)c;
     buffer->down();
-    if (buffer->get_y() > static_cast<size_t>(widgetHeight / textHeight) + visible_lines_offset) {
+    if (buffer->get_y() > num_lines + visible_lines_offset) {
         visible_lines_offset++;
         lines.erase(lines.begin());
         Buffer::Line line = buffer->get_line(buffer->get_y());
