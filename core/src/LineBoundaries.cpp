@@ -12,16 +12,12 @@ LineBoundaries::LineBoundaries(crope::const_iterator begin, crope::const_iterato
     line_boundaries.push_back(lineBoundary);
 }
 
-LineBoundary& LineBoundaries::operator[](size_t n) {
-    return line_boundaries[n - offset];
-}
-
-const LineBoundary& LineBoundaries::operator[](size_t n) const {
+const LineBoundary& LineBoundaries::at(size_t n) const {
     return line_boundaries[n - offset];
 }
 
 void LineBoundaries::remove_line(size_t idx) {
-    LineBoundary lineBoundary = line_boundaries[idx];
+    LineBoundary lineBoundary = line_boundaries[idx - offset];
     line_boundaries.erase(line_boundaries.begin() + (idx - offset));
     for (auto it = line_boundaries.begin() + (idx - offset);
          it != line_boundaries.end();
@@ -39,39 +35,25 @@ bool LineBoundaries::has_range(size_t idx, size_t n) {
     return has(idx) && has(idx + n);
 }
 
-void LineBoundaries::fill_range(const crope& r, size_t start, size_t n) {
-    if (start >= offset) {
-        while(line_boundaries.size() < start + n) {
+void LineBoundaries::expand_boundary(const crope &r, bool back_end, size_t n) {
+    if (back_end) {
+        for (size_t i = 0; i < n; i++) {
             LineBoundary lastBoundary = line_boundaries[line_boundaries.size() - 1];
             size_t start_idx = lastBoundary.start_idx + lastBoundary.length + 1;
             auto it = r.begin() + start_idx;
             size_t l = 0;
-            while (it < r.end() && *it != '\n') {
+            while(it < r.end() && *it != '\n') {
                 ++l;
                 ++it;
             }
-            LineBoundary newBoundary = {start_idx, l};
-            line_boundaries.push_back(newBoundary);
-            ++it;
+            this->insert(line_boundaries.size() - 1, l);
         }
     } else {
-        assert(0 && "fill_range case not implemented");
+        assert(0 && "expanding down not implemented");
     }
 }
 
-void LineBoundaries::update_range(crope::const_iterator begin, crope::const_iterator end, size_t start, size_t n) {
-    for (size_t i = start; i < start + n; i++) {
-        size_t l = 0;
-        while (begin != end && *begin != '\n') {
-            ++l;
-            ++begin;
-        }
-        LineBoundary lineBoundary = {0, l};
-        line_boundaries[i - offset] = lineBoundary;
-    }
-}
-
-void LineBoundaries::lengthen(size_t idx, size_t amt) {
+void LineBoundaries::lengthen(size_t idx, int amt) {
     size_t i = idx - offset;
     line_boundaries[i].length += amt;
     for (i = i+1; i < line_boundaries.size(); ++i) {
@@ -84,8 +66,17 @@ void LineBoundaries::insert(size_t pos, size_t length) {
     LineBoundary newBoundary = {lineBoundary.start_idx + lineBoundary.length + 1, 0};
     line_boundaries.insert(line_boundaries.begin() + pos - offset + 1, newBoundary);
     lengthen(pos + 1, length);
+    for (size_t i = pos + 2; i < line_boundaries.size(); ++i) {
+        line_boundaries[i].start_idx += 1;
+    }
+
 }
 
 size_t LineBoundaries::last_index() {
-    return line_boundaries.size() + offset;
+    return line_boundaries.size() + offset - 1;
 }
+
+size_t LineBoundaries::first_index() {
+    return offset;
+}
+
