@@ -129,6 +129,7 @@ void Buffer::right() {
         } else {
             ++cursor.x;
         }
+        cursor.last_x = get_x();
     }
 }
 
@@ -140,25 +141,38 @@ void Buffer::left() {
         } else {
             --cursor.x;
         }
+        cursor.last_x = get_x();
     }
 }
 
 void Buffer::up() {
-    if (cursor.y == line_boundaries->first_index()) {
-        // TODO: scrolling and edge detection
+    if (cursor.y == 0) {
         return;
     }
-    --cursor.y;
-    cursor.x = min(get_x(), line_boundaries->at(cursor.y).length);
+    else if (cursor.y == line_boundaries->first_index()) {
+        assert(0 && "scrolling up into new text not implemented");
+//        line_boundaries->expand_boundary(*rope, false, 1);
+    } else {
+        --cursor.y;
+        if (cursor.last_x < line_boundaries->at(get_y()).length) {
+            cursor.x = cursor.last_x;
+        } else {
+            cursor.x = line_boundaries->at(get_y()).length;
+        }
+    }
 }
 
 void Buffer::down() {
+    // TODO: if cursor.y == last_line: return
     if (cursor.y == line_boundaries->last_index()) {
-        // TODO: scrolling and edge detection
-        return;
+        line_boundaries->expand_boundary(*rope, true, 1);
     }
     ++cursor.y;
-    cursor.x = min(get_x(), line_boundaries->at(cursor.y).length);
+    if (cursor.last_x < line_boundaries->at(get_y()).length) {
+        cursor.x = cursor.last_x;
+    } else {
+        cursor.x = line_boundaries->at(get_y()).length;
+    }
 }
 
 crope::const_iterator Buffer::end() {
