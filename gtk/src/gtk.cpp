@@ -8,11 +8,16 @@ public:
         set_title("ETME");
         add_events(Gdk::KEY_PRESS_MASK);
 
-        buffer = new Buffer("test");
+        buffer = new Buffer("../test_data/war_and_peace.txt");
 
         area = new BufferView(buffer);
         add(*area);
         area->show();
+    }
+
+    ~EtmeWindow() override {
+        delete buffer;
+        delete area;
     }
 private:
     bool on_key_press_event(GdkEventKey* event) override {

@@ -16,9 +16,10 @@ protected:
 
 private:
     Buffer* buffer;
-    int widgetWidth, widgetHeight, textWidth{}, textHeight{};
+    int widgetWidth, widgetHeight, textWidth, textHeight;
     Pango::FontDescription font;
     vector<Glib::RefPtr<Pango::Layout>> lines;
+    size_t visible_lines_offset;
 
     void up(char c);
     void down(char c);
