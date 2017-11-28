@@ -5,43 +5,44 @@
 #include <vector>
 #include <map>
 #include "Cursor.h"
+#include "LineBoundaries.h"
 
 using namespace __gnu_cxx;
 using namespace std;
 
-struct line_boundary { size_t start_idx; size_t length; };
-struct line { crope rope; size_t start_idx; };
 
 class Buffer {
 private:
     crope *rope;
+    Cursor cursor;
 
-    void erase(size_t i, size_t n);
-    // A sorted map between line number and (start idx, length) of line
-    map<size_t, line_boundary> line_boundaries;
-
-    void fill_line_boundaries(size_t start, size_t num);
+    LineBoundaries* line_boundaries;
 
 public:
     Buffer();
     explicit Buffer(const char* filename);
+    ~Buffer();
 
+    struct Line { crope rope; size_t start_idx; };
+
+    size_t get_x();
+    size_t get_idx();
+    size_t get_y();
     const crope& get_rope();
     crope::const_iterator begin();
     crope::const_iterator end();
     size_t length();
-    void backspace();
-    void insert(char ch);
-    void insert(const char* s);
-    char cur();
-    char before();
-    char next();
-    void right(size_t n = 1);
-    void left(size_t n = 1);
+    bool backspace();
+    bool insert(char ch);
+    bool insert(string s);
+    void right();
+    void left();
+    void up();
+    void down();
 
-    vector<line> get_lines(size_t start, size_t num);
+    vector<Line> get_lines(size_t start, size_t num);
+    Line get_line(size_t y);
 
-    Cursor cursor;
     const char* filename;
 };
 

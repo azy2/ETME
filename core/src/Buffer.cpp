@@ -1,8 +1,10 @@
+#include <cassert>
+#include <algorithm>
 #include "Buffer.h"
-#include "string.h"
 
 Buffer::Buffer() : cursor(0, 0), filename("*scratch*") {
     rope = new crope();
+    line_boundaries = new LineBoundaries(rope->begin(), rope->end());
 }
 
 // TODO: Better error handeling
@@ -31,6 +33,24 @@ public:
 Buffer::Buffer(const char* filename) : cursor(0, 0), filename(filename) {
     auto *fcp = new file_char_prod(filename);
     rope = new crope(fcp, fcp->len(), true);
+    line_boundaries = new LineBoundaries(rope->begin(), rope->end());
+}
+
+Buffer::~Buffer() {
+    delete line_boundaries;
+    delete rope;
+}
+
+size_t Buffer::get_x() {
+    return cursor.x;
+}
+
+size_t Buffer::get_idx() {
+    return line_boundaries->at(cursor.y).start_idx + cursor.x;
+}
+
+size_t Buffer::get_y() {
+    return cursor.y;
 }
 
 crope::const_iterator Buffer::begin() {
@@ -41,132 +61,130 @@ size_t Buffer::length() {
     return rope->length();
 }
 
-void Buffer::erase(size_t i, size_t n) {
-    rope->erase(i, n);
-}
-
-void Buffer::backspace() {
-    if (cursor.isRegion()) {
-        erase(min(cursor.start, cursor.end), static_cast<size_t>(abs((int)cursor.start - (int)cursor.end)));
-        cursor.start = cursor.end = min(cursor.start, cursor.end);
-    } else if (cursor.start > 0) {
-        erase(cursor.start - 1, 1);
-        --cursor.start;
-        --cursor.end;
+bool Buffer::backspace() {
+    rope->erase(get_idx() - 1, 1);
+    if (get_x() != 0) {
+        --cursor.x;
+        line_boundaries->lengthen(cursor.y, -1);
+        return false;
+    } else if (get_x() == 0 && get_y() > 0) {
+        --cursor.y;
+        cursor.x = line_boundaries->at(get_y()).length;
+        int length_to_add = static_cast<int>(line_boundaries->at(get_y() + 1).length);
+        line_boundaries->remove_line(get_y() + 1);
+        line_boundaries->lengthen(get_y(), length_to_add);
+        return true;
+    } else {
+        return false;
     }
 }
 
-void Buffer::insert(char ch) {
-    if (cursor.isRegion()) {
-        erase(min(cursor.start, cursor.end), static_cast<size_t>(abs((int)cursor.start - (int)cursor.end)));
-        cursor.start = cursor.end = min(cursor.start, cursor.end);
+bool Buffer::insert(char ch) {
+    if (ch == '\n') {
+        rope->insert(get_idx(), ch);
+        line_boundaries->insert(get_y(), 0);
+        int rest_of_line_length = static_cast<int>(line_boundaries->at(get_y()).length - get_x());
+        line_boundaries->lengthen(get_y(), -rest_of_line_length);
+        line_boundaries->lengthen(get_y() + 1, rest_of_line_length);
+        cursor.x = 0;
+        ++cursor.y;
+        return true;
+    } else {
+        rope->insert(get_idx(), ch);
+        ++cursor.x;
+        line_boundaries->lengthen(get_y(), 1);
+        return false;
     }
-    rope->insert(cursor.start, ch);
-    ++cursor.start;
-    ++cursor.end;
 }
 
-void Buffer::insert(const char *s) {
-    if (cursor.isRegion()) {
-        erase(min(cursor.start, cursor.end), static_cast<size_t>(abs((int)cursor.start - (int)cursor.end)));
-        cursor.start = cursor.end = min(cursor.start, cursor.end);
-    }
-
-    rope->insert(cursor.start, s);
-    size_t len = strlen(s);
-    cursor.start += len;
-    cursor.end += len;
-}
-
-char Buffer::cur() {
-    return rope->at(cursor.start);
-}
-
-char Buffer::before() {
-    return rope->at(cursor.start - 1);
-}
-
-char Buffer::next() {
-    return rope->at(cursor.start + 1);
-}
-
-void Buffer::right(size_t n) {
-    if (cursor.isRegion()) {
-        if (cursor.end < this->length()) {
-            cursor.end += n;
+bool Buffer::insert(string s) {
+    rope->insert(get_idx(), s.c_str());
+    size_t firstNl = s.find('\n');
+    if (firstNl != string::npos) {
+        line_boundaries->lengthen(get_y(), firstNl);
+        while (true) {
+            size_t nextNl = s.find('\n', firstNl + 1);
+            if (nextNl == string::npos) {
+                line_boundaries->insert(get_y(), s.length() - firstNl - 1);
+                ++cursor.y;
+                cursor.x = line_boundaries->at(get_y()).length;
+                return true;
+            }
+            line_boundaries->insert(get_y(), nextNl - firstNl - 1);
+            firstNl = nextNl;
+            ++cursor.y;
         }
     } else {
-        if (cursor.start < this->length()) {
-            cursor.start += n;
-            cursor.end += n;
+        line_boundaries->lengthen(get_y(), s.size());
+        cursor.x += s.size();
+        return false;
+    }
+}
+
+void Buffer::right() {
+    if (get_idx() < this->length()) {
+        if (get_x() + 1 > line_boundaries->at(cursor.y).length) {
+            cursor.x = 0;
+            ++cursor.y;
+        } else {
+            ++cursor.x;
         }
     }
 }
 
-void Buffer::left(size_t n) {
-    if (cursor.isRegion()) {
-        if (cursor.end > 0) {
-            cursor.end -= n;
-        }
-    } else {
-        if (cursor.start > 0) {
-            cursor.start -= n;
-            cursor.end -= n;
+void Buffer::left() {
+    if (get_idx() > 0) {
+        if (get_x() == 0) {
+            --cursor.y;
+            cursor.x = line_boundaries->at(cursor.y).length;
+        } else {
+            --cursor.x;
         }
     }
+}
+
+void Buffer::up() {
+    if (cursor.y == line_boundaries->first_index()) {
+        // TODO: scrolling and edge detection
+        return;
+    }
+    --cursor.y;
+    cursor.x = min(get_x(), line_boundaries->at(cursor.y).length);
+}
+
+void Buffer::down() {
+    if (cursor.y == line_boundaries->last_index()) {
+        // TODO: scrolling and edge detection
+        return;
+    }
+    ++cursor.y;
+    cursor.x = min(get_x(), line_boundaries->at(cursor.y).length);
 }
 
 crope::const_iterator Buffer::end() {
     return rope->end();
 }
 
-void Buffer::fill_line_boundaries(size_t start, size_t num) {
-    size_t idx;
-    if (line_boundaries.count(start) == 0) {
-        idx = 0;
-    } else {
-        idx = line_boundaries[start].start_idx + line_boundaries[start].length + 1;
-    }
-
-    auto it = rope->begin() + idx;
-    for (size_t l = start; l < start + num; ++l) {
-        if (line_boundaries.count(l) == 1) {
-            it += line_boundaries[l].length;
-            idx += line_boundaries[l].length;
-            continue;
-        }
-        size_t start_idx = idx;
-        while (it != rope->end() && *it != '\n') {
-            ++it;
-            ++idx;
-        }
-        line_boundaries[l] = {start_idx, idx - start_idx};
-        ++it;
-        ++idx;
-    }
-}
-
-vector<line> Buffer::get_lines(size_t start, size_t num) {
-    if (line_boundaries.count(start) == 0) {
-        auto less = line_boundaries.lower_bound(start);
-        if (less == line_boundaries.cbegin()) {
-            fill_line_boundaries(0, start + num);
-        } else {
-            fill_line_boundaries(less->second.start_idx, start + num - less->second.start_idx);
-        }
-    } else {
-        fill_line_boundaries(start, num);
-    }
-    vector<line> lines;
+vector<Buffer::Line> Buffer::get_lines(size_t start, size_t num) {
+    vector<Buffer::Line> lines;
     for (size_t l = start; l < start + num; l++) {
-        crope r = rope->substr(line_boundaries[l].start_idx, line_boundaries[l].length);
-        lines.push_back({r, line_boundaries[l].start_idx});
+        lines.push_back(get_line(l));
     }
 
     return lines;
 }
 
+Buffer::Line Buffer::get_line(size_t y) {
+    if (!line_boundaries->has(y)) {
+        line_boundaries->expand_boundary(*rope, true, y - line_boundaries->last_index());
+    }
+    crope r = rope->substr(line_boundaries->at(y).start_idx, line_boundaries->at(y).length);
+    return {r, line_boundaries->at(y).start_idx};
+}
+
 const crope &Buffer::get_rope() {
     return *rope;
 }
+
+
 

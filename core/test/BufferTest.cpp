@@ -1,10 +1,10 @@
+#include <iostream>
 #include "catch.hpp"
 #include "Buffer.h"
-#include <iostream>
 
 using namespace std;
 
-TEST_CASE( "insert" ) {
+TEST_CASE( "no newlines", "[insert]" ) {
     Buffer buffer;
     buffer.insert('a');
     REQUIRE(buffer.get_rope().compare(crope("a")) == 0);
@@ -12,7 +12,25 @@ TEST_CASE( "insert" ) {
     REQUIRE(buffer.get_rope().compare(crope("abcd")) == 0);
 }
 
-TEST_CASE( "accurate line_boundaries" ) {
+TEST_CASE( "newlines", "[insert]" ) {
+    Buffer buffer;
+    buffer.insert("abc");
+    buffer.insert('\n');
+    buffer.insert("abc\nabc");
+    buffer.insert("\nabc");
+    REQUIRE(buffer.get_rope().compare(crope("abc\nabc\nabc\nabc")) == 0);
+}
+
+TEST_CASE( "get_x" ) {
+    Buffer buffer;
+    buffer.insert("abcd");
+    REQUIRE(buffer.get_x() == 4);
+    buffer.insert("\nabc");
+    REQUIRE(buffer.get_x() == 3);
+    REQUIRE(buffer.get_idx() == 8);
+}
+
+TEST_CASE( "get_lines" ) {
     Buffer buffer;
     buffer.insert("12345\n1234\n123\n12\n");
     auto lines = buffer.get_lines(0, 4);
@@ -25,5 +43,30 @@ TEST_CASE( "accurate line_boundaries" ) {
     REQUIRE( lines.at(2).start_idx == 11 );
     REQUIRE( lines.at(3).rope.compare(crope("12")) == 0);
     REQUIRE( lines.at(3).start_idx == 15 );
-
 }
+
+TEST_CASE( "backspace" ) {
+    Buffer buffer;
+    buffer.insert("1234\n5678");
+    buffer.left();
+    buffer.backspace();
+    buffer.up();
+    buffer.backspace();
+    buffer.down();
+    buffer.backspace();
+
+    auto lines = buffer.get_lines(0, 2);
+    REQUIRE(lines.at(0).rope.compare(crope("134")) == 0);
+    REQUIRE(lines.at(1).rope.compare(crope("68")) == 0);
+
+    buffer.backspace();
+    REQUIRE(buffer.get_x() == 3);
+    REQUIRE(buffer.get_y() == 0);
+    auto line = buffer.get_line(0);
+    REQUIRE(line.rope.compare(crope("13468")) == 0);
+}
+
+//13469
+
+//134
+//68
