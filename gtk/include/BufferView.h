@@ -22,6 +22,10 @@ private:
     vector<Glib::RefPtr<Pango::Layout>> lines;
     size_t visible_lines_offset;
 
+    bool control(GdkEventKey* key, guint c = 0);
+    bool meta(GdkEventKey *key, guint c = 0);
+    bool shift(GdkEventKey* key, guint c = 0);
+
     void up(char c);
     void down(char c);
     void right(char c);

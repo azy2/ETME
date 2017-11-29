@@ -121,6 +121,31 @@ bool Buffer::insert(string s) {
     }
 }
 
+crope::const_iterator Buffer::end() {
+    return rope->end();
+}
+
+vector<Buffer::Line> Buffer::get_lines(size_t start, size_t num) {
+    vector<Buffer::Line> lines;
+    for (size_t l = start; l < start + num; l++) {
+        lines.push_back(get_line(l));
+    }
+
+    return lines;
+}
+
+Buffer::Line Buffer::get_line(size_t y) {
+    if (!line_boundaries->has(y)) {
+        line_boundaries->expand_boundary(*rope, true, y - line_boundaries->last_index());
+    }
+    crope r = rope->substr(line_boundaries->at(y).start_idx, line_boundaries->at(y).length);
+    return {r, line_boundaries->at(y).start_idx};
+}
+
+const crope &Buffer::get_rope() {
+    return *rope;
+}
+
 void Buffer::right() {
     if (get_idx() < this->length()) {
         if (get_x() + 1 > line_boundaries->at(cursor.y).length) {
@@ -175,29 +200,44 @@ void Buffer::down() {
     }
 }
 
-crope::const_iterator Buffer::end() {
-    return rope->end();
-}
-
-vector<Buffer::Line> Buffer::get_lines(size_t start, size_t num) {
-    vector<Buffer::Line> lines;
-    for (size_t l = start; l < start + num; l++) {
-        lines.push_back(get_line(l));
+void Buffer::back_word() {
+    if (get_idx() == 0) {
+        return;
     }
-
-    return lines;
-}
-
-Buffer::Line Buffer::get_line(size_t y) {
-    if (!line_boundaries->has(y)) {
-        line_boundaries->expand_boundary(*rope, true, y - line_boundaries->last_index());
+    auto it = rope->begin() + get_idx();
+    size_t i = 0;
+    if (is_whitespace(*(it - 1))) {
+        --it;
+        ++i;
+        // On boundary of current word, find beginning of previous word.
+        while (it != rope->begin() && is_whitespace(*it)) {
+            --it;
+            ++i;
+        }
     }
-    crope r = rope->substr(line_boundaries->at(y).start_idx, line_boundaries->at(y).length);
-    return {r, line_boundaries->at(y).start_idx};
+    // Backup to beginning of current word.
+    while (it != rope->begin() && !is_whitespace(*it)) {
+        --it;
+        ++i;
+    }
+    cursor.x -= (i - 1);
 }
 
-const crope &Buffer::get_rope() {
-    return *rope;
+void Buffer::forward_word() {
+
+}
+
+void Buffer::beginning_of_line() {
+    cursor.x = 0;
+    cursor.last_x = 0;
+}
+
+void Buffer::end_of_line() {
+    cursor.x = cursor.last_x = line_boundaries->at(get_y()).length;
+}
+
+bool Buffer::is_whitespace(char c) {
+    return c == ' ' || c == '\t' || c == '\n' || c == '\r';
 }
 
 

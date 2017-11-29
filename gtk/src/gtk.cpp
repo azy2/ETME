@@ -4,11 +4,11 @@
 class EtmeWindow : public Gtk::Window {
 public:
     EtmeWindow() : Gtk::Window::Window() {
-        set_default_size(1920, 2000);
+        set_default_size(1000, 1000);
         set_title("ETME");
         add_events(Gdk::KEY_PRESS_MASK);
 
-        buffer = new Buffer("../test_data/war_and_peace.txt");
+        buffer = new Buffer("../test_data/Buffer.cpp");
 
         area = new BufferView(buffer);
         add(*area);

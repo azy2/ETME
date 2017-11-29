@@ -18,6 +18,8 @@ private:
 
     LineBoundaries* line_boundaries;
 
+    bool is_whitespace(char c);
+
 public:
     Buffer();
     explicit Buffer(const char* filename);
@@ -39,6 +41,10 @@ public:
     void left();
     void up();
     void down();
+    void beginning_of_line();
+    void end_of_line();
+    void back_word();
+    void forward_word();
 
     vector<Line> get_lines(size_t start, size_t num);
     Line get_line(size_t y);

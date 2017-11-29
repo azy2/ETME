@@ -6,7 +6,7 @@ BufferView::BufferView(Buffer* buffer) : buffer(buffer) {
     widgetWidth = 0;
     widgetHeight = 0;
     font.set_family("DejaVu Sans Mono");
-    font.set_size(16 * PANGO_SCALE);
+    font.set_size(13 * PANGO_SCALE);
     auto context = get_pango_context();
     context->set_font_description(font);
     auto layout = create_pango_layout("a");
@@ -20,14 +20,23 @@ BufferView::BufferView(Buffer* buffer) : buffer(buffer) {
 }
 
 void BufferView::key_press_event(GdkEventKey* event) {
-    if (event->keyval == GDK_KEY_Up) {
+    if (event->keyval == GDK_KEY_Up || control(event, GDK_KEY_p)) {
         up(static_cast<char>(event->keyval));
-    } else if (event->keyval == GDK_KEY_Down) {
+    } else if (event->keyval == GDK_KEY_Down || control(event, GDK_KEY_n)) {
         down(static_cast<char>(event->keyval));
-    } else if (event->keyval == GDK_KEY_Left) {
+    } else if (event->keyval == GDK_KEY_Left || control(event, GDK_KEY_b)) {
         left(static_cast<char>(event->keyval));
-    } else if (event->keyval == GDK_KEY_Right) {
+    } else if (event->keyval == GDK_KEY_Right || control(event, GDK_KEY_f)) {
         right(static_cast<char>(event->keyval));
+    } else if (meta(event, GDK_KEY_b)) {
+        cout << "M-b" << endl;
+        buffer->back_word();
+    } else if (meta(event, GDK_KEY_f)) {
+        buffer->forward_word();
+    } else if (control(event, GDK_KEY_a)) {
+        buffer->beginning_of_line();
+    } else if (control(event, GDK_KEY_e)) {
+        buffer->end_of_line();
     } else if (event->keyval == GDK_KEY_BackSpace) {
         backspace(static_cast<char>(event->keyval));
     } else if (event->keyval >= 32 && event->keyval <= 126 && ((event->state & (GDK_CONTROL_MASK | GDK_MOD1_MASK)) == 0)) {
@@ -162,4 +171,19 @@ void BufferView::backspace(char c) {
     Buffer::Line line_data = buffer->get_line(buffer->get_y());
     Glib::ustring text(line_data.rope.c_str());
     lines[buffer->get_y()]->set_text(text);
+}
+
+bool BufferView::control(GdkEventKey *key, guint c) {
+    bool ctrl = ((key->state & GDK_CONTROL_MASK) == GDK_CONTROL_MASK);
+    return c != 0 ? ctrl && key->keyval == c : ctrl;
+}
+
+bool BufferView::meta(GdkEventKey *key, guint c) {
+    bool meta = ((key->state & GDK_MOD1_MASK) == GDK_MOD1_MASK);
+    return c != 0 ? meta && key->keyval == c : meta;
+}
+
+bool BufferView::shift(GdkEventKey *key, guint c) {
+    bool shift = ((key->state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK);
+    return c != 0 ? shift && key->keyval == c : shift;
 }

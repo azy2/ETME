@@ -12,8 +12,14 @@ set(CORE_INCLUDE_DIR core/include)
 set(CORE_HEADERS core/include/Buffer.h core/include/Cursor.h core/include/Optional.h core/include/LineBoundaries.h)
 set(CORE_SRCS core/src/Buffer.cpp core/src/LineBoundaries.cpp)
 
+#find_package(LLVM REQUIRED CONFIG)
+
+#add_definitions(${LLVM_DEFINITIONS})
 add_library(etme_core ${CORE_SRCS} ${CORE_HEADERS})
 target_include_directories(etme_core PRIVATE ${CORE_INCLUDE_DIR})
+#target_include_directories(etme_core PRIVATE ${LLVM_INCLUDE_DIRS})
+#llvm_map_components_to_libnames(llvm_libs core)
+#target_link_libraries(etme_core ${llvm_libs})
 
 set(CORE_TEST_SRCS core/test/test_main.cpp core/test/BufferTest.cpp core/test/LineBoundariesTest.cpp)
 
