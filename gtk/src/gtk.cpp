@@ -8,7 +8,7 @@ public:
         set_title("ETME");
         add_events(Gdk::KEY_PRESS_MASK);
 
-        buffer = new Buffer("../test_data/Buffer.cpp");
+        buffer = new Buffer("../core/src/Buffer.cpp");
 
         area = new BufferView(buffer);
         add(*area);

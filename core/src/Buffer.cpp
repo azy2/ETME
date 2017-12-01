@@ -146,27 +146,33 @@ const crope &Buffer::get_rope() {
     return *rope;
 }
 
-void Buffer::right() {
-    if (get_idx() < this->length()) {
-        if (get_x() + 1 > line_boundaries->at(cursor.y).length) {
-            cursor.x = 0;
-            ++cursor.y;
-        } else {
-            ++cursor.x;
+// NOTE: don't use this for far jumps. It is inefficient.
+void Buffer::forward(size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        if (get_idx() < this->length()) {
+            if (get_x() + 1 > line_boundaries->at(cursor.y).length) {
+                cursor.x = 0;
+                ++cursor.y;
+            } else {
+                ++cursor.x;
+            }
+            cursor.last_x = get_x();
         }
-        cursor.last_x = get_x();
     }
 }
 
-void Buffer::left() {
-    if (get_idx() > 0) {
-        if (get_x() == 0) {
-            --cursor.y;
-            cursor.x = line_boundaries->at(cursor.y).length;
-        } else {
-            --cursor.x;
+// NOTE: don't use this for far jumps. It is inefficient.
+void Buffer::back(size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        if (get_idx() > 0) {
+            if (get_x() == 0) {
+                --cursor.y;
+                cursor.x = line_boundaries->at(cursor.y).length;
+            } else {
+                --cursor.x;
+            }
+            cursor.last_x = get_x();
         }
-        cursor.last_x = get_x();
     }
 }
 
@@ -204,27 +210,36 @@ void Buffer::back_word() {
     if (get_idx() == 0) {
         return;
     }
-    auto it = rope->begin() + get_idx();
+    auto it = rope->begin() + get_idx() - 1;
     size_t i = 0;
-    if (is_whitespace(*(it - 1))) {
+    // On boundary of current word, find beginning of previous word.
+    while (it != (rope->begin() - 1) && is_whitespace(*it)) {
         --it;
         ++i;
-        // On boundary of current word, find beginning of previous word.
-        while (it != rope->begin() && is_whitespace(*it)) {
-            --it;
-            ++i;
-        }
     }
     // Backup to beginning of current word.
-    while (it != rope->begin() && !is_whitespace(*it)) {
+    while (it != (rope->begin() - 1) && !is_whitespace(*it)) {
         --it;
         ++i;
     }
-    cursor.x -= (i - 1);
+    back(i);
 }
 
 void Buffer::forward_word() {
-
+    if (get_idx() == rope->length()) {
+        return;
+    }
+    auto it = rope->begin() + get_idx();
+    size_t i = 0;
+    while (it != rope->end() && !is_whitespace(*it)) {
+        ++it;
+        ++i;
+    }
+    while (it != rope->end() && is_whitespace(*it)) {
+        ++it;
+        ++i;
+    }
+    forward(i);
 }
 
 void Buffer::beginning_of_line() {
@@ -239,6 +254,3 @@ void Buffer::end_of_line() {
 bool Buffer::is_whitespace(char c) {
     return c == ' ' || c == '\t' || c == '\n' || c == '\r';
 }
-
-
-

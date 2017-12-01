@@ -48,7 +48,7 @@ TEST_CASE( "get_lines" ) {
 TEST_CASE( "backspace" ) {
     Buffer buffer;
     buffer.insert("1234\n5678");
-    buffer.left();
+    buffer.back();
     buffer.backspace();
     buffer.up();
     buffer.backspace();
@@ -65,8 +65,25 @@ TEST_CASE( "backspace" ) {
     auto line = buffer.get_line(0);
     REQUIRE(line.rope.compare(crope("13468")) == 0);
 }
+// 134
+// 68
 
-//13469
+TEST_CASE( "back_word" ) {
+    Buffer buffer;
+    buffer.insert("word word abc");
+    buffer.back_word();
+    REQUIRE(buffer.get_x() == 10);
+    buffer.back_word();
+    REQUIRE(buffer.get_x() == 5);
+    buffer.back_word();
+    REQUIRE(buffer.get_x() == 0);
+}
 
-//134
-//68
+TEST_CASE( "forward_word" ) {
+    Buffer buffer;
+    buffer.insert("word word abc");
+    buffer.beginning_of_line();
+    REQUIRE(buffer.get_x() == 0);
+    buffer.forward_word();
+    REQUIRE(buffer.get_x() == 5);
+}

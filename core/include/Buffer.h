@@ -37,8 +37,8 @@ public:
     bool backspace();
     bool insert(char ch);
     bool insert(string s);
-    void right();
-    void left();
+    void forward(size_t n = 1);
+    void back(size_t n = 1);
     void up();
     void down();
     void beginning_of_line();

@@ -29,7 +29,6 @@ void BufferView::key_press_event(GdkEventKey* event) {
     } else if (event->keyval == GDK_KEY_Right || control(event, GDK_KEY_f)) {
         right(static_cast<char>(event->keyval));
     } else if (meta(event, GDK_KEY_b)) {
-        cout << "M-b" << endl;
         buffer->back_word();
     } else if (meta(event, GDK_KEY_f)) {
         buffer->forward_word();
@@ -70,6 +69,24 @@ bool BufferView::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
     cr->set_source_rgb(131 / 256.0, 148 / 256.0, 150 / 256.0);
     cr->set_antialias(Cairo::ANTIALIAS_DEFAULT);
 
+    while (buffer->get_y() > num_lines + visible_lines_offset - 1) {
+        visible_lines_offset++;
+        lines.erase(lines.begin());
+        Buffer::Line line = buffer->get_line(buffer->get_y());
+        Glib::ustring text(line.rope.c_str());
+        auto layout = create_pango_layout(text);
+        lines.push_back(layout);
+    }
+
+    while (buffer->get_y() < visible_lines_offset) {
+        visible_lines_offset--;
+        lines.erase(lines.end() - 1);
+        Buffer::Line line = buffer->get_line(buffer->get_y());
+        Glib::ustring text(line.rope.c_str());
+        auto layout = create_pango_layout(text);
+        lines.insert(lines.begin(), layout);
+    }
+
     int i = 0;
     for (const auto& line : lines) {
         cr->move_to(0, textHeight * i);
@@ -107,37 +124,21 @@ bool BufferView::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
 void BufferView::up(char c) {
     (void)c;
     buffer->up();
-    if (buffer->get_y() < visible_lines_offset) {
-        visible_lines_offset--;
-        lines.erase(lines.end() - 1);
-        Buffer::Line line = buffer->get_line(buffer->get_y());
-        Glib::ustring text(line.rope.c_str());
-        auto layout = create_pango_layout(text);
-        lines.insert(lines.begin(), layout);
-    }
 }
 
 void BufferView::down(char c) {
     (void)c;
     buffer->down();
-    if (buffer->get_y() > num_lines + visible_lines_offset) {
-        visible_lines_offset++;
-        lines.erase(lines.begin());
-        Buffer::Line line = buffer->get_line(buffer->get_y());
-        Glib::ustring text(line.rope.c_str());
-        auto layout = create_pango_layout(text);
-        lines.push_back(layout);
-    }
 }
 
 void BufferView::right(char c) {
     (void)c;
-    buffer->right();
+    buffer->forward();
 }
 
 void BufferView::left(char c) {
     (void)c;
-    buffer->left();
+    buffer->back();
 }
 
 void BufferView::ins(char c) {
