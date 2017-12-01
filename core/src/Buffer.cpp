@@ -65,11 +65,12 @@ bool Buffer::backspace() {
     rope->erase(get_idx() - 1, 1);
     if (get_x() != 0) {
         --cursor.x;
+        cursor.last_x = cursor.x;
         line_boundaries->lengthen(cursor.y, -1);
         return false;
     } else if (get_x() == 0 && get_y() > 0) {
         --cursor.y;
-        cursor.x = line_boundaries->at(get_y()).length;
+        cursor.last_x = cursor.x = line_boundaries->at(get_y()).length;
         int length_to_add = static_cast<int>(line_boundaries->at(get_y() + 1).length);
         line_boundaries->remove_line(get_y() + 1);
         line_boundaries->lengthen(get_y(), length_to_add);
@@ -86,12 +87,13 @@ bool Buffer::insert(char ch) {
         int rest_of_line_length = static_cast<int>(line_boundaries->at(get_y()).length - get_x());
         line_boundaries->lengthen(get_y(), -rest_of_line_length);
         line_boundaries->lengthen(get_y() + 1, rest_of_line_length);
-        cursor.x = 0;
+        cursor.last_x = cursor.x = 0;
         ++cursor.y;
         return true;
     } else {
         rope->insert(get_idx(), ch);
         ++cursor.x;
+        cursor.last_x = cursor.x;
         line_boundaries->lengthen(get_y(), 1);
         return false;
     }
@@ -107,7 +109,7 @@ bool Buffer::insert(string s) {
             if (nextNl == string::npos) {
                 line_boundaries->insert(get_y(), s.length() - firstNl - 1);
                 ++cursor.y;
-                cursor.x = line_boundaries->at(get_y()).length;
+                cursor.last_x = cursor.x = line_boundaries->at(get_y()).length;
                 return true;
             }
             line_boundaries->insert(get_y(), nextNl - firstNl - 1);
@@ -117,6 +119,7 @@ bool Buffer::insert(string s) {
     } else {
         line_boundaries->lengthen(get_y(), s.size());
         cursor.x += s.size();
+        cursor.last_x = cursor.x;
         return false;
     }
 }
@@ -231,14 +234,22 @@ void Buffer::forward_word() {
     }
     auto it = rope->begin() + get_idx();
     size_t i = 0;
-    while (it != rope->end() && !is_whitespace(*it)) {
-        ++it;
-        ++i;
+    if (it != rope->end() && !is_whitespace(*it)) {
+        while (it != rope->end() && !is_whitespace(*it)) {
+            ++it;
+            ++i;
+        }
+    } else {
+        while (it != rope->end() && is_whitespace(*it)) {
+            ++it;
+            ++i;
+        }
+        while (it != rope->end() && !is_whitespace(*it)) {
+            ++it;
+            ++i;
+        }
     }
-    while (it != rope->end() && is_whitespace(*it)) {
-        ++it;
-        ++i;
-    }
+
     forward(i);
 }
 

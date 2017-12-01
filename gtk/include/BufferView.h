@@ -3,11 +3,14 @@
 
 #include <gtkmm.h>
 #include "Buffer.h"
+#ifdef DEBUG
+#include <ctime>
+#endif
 
 class BufferView : public Gtk::DrawingArea {
     typedef Gtk::DrawingArea super;
 public:
-    explicit BufferView(Buffer* buffer);
+    explicit BufferView(Buffer* buffer, class EtmeWindow* window);
     void key_press_event(GdkEventKey* event);
 
 protected:
@@ -32,6 +35,8 @@ private:
     void left(char c);
     void ins(char c);
     void backspace(char c);
+
+    class EtmeWindow* window;
 };
 
 

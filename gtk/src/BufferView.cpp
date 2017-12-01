@@ -1,7 +1,8 @@
 #include <iostream>
 #include "BufferView.h"
+#include "EtmeWindow.h"
 
-BufferView::BufferView(Buffer* buffer) : buffer(buffer) {
+BufferView::BufferView(Buffer* buffer, EtmeWindow* window) : buffer(buffer), window(window) {
     this->add_events(Gdk::KEY_PRESS_MASK);
     widgetWidth = 0;
     widgetHeight = 0;
@@ -20,6 +21,10 @@ BufferView::BufferView(Buffer* buffer) : buffer(buffer) {
 }
 
 void BufferView::key_press_event(GdkEventKey* event) {
+#ifdef DEBUG
+    window->eventStart(EtmeWindow::EventType::keypress);
+    window->eventStart(EtmeWindow::EventType::total);
+#endif
     if (event->keyval == GDK_KEY_Up || control(event, GDK_KEY_p)) {
         up(static_cast<char>(event->keyval));
     } else if (event->keyval == GDK_KEY_Down || control(event, GDK_KEY_n)) {
@@ -44,6 +49,9 @@ void BufferView::key_press_event(GdkEventKey* event) {
         ins('\n');
     }
     this->queue_draw();
+#ifdef DEBUG
+    window->eventEnd(EtmeWindow::EventType::keypress);
+#endif
 }
 
 void BufferView::on_size_allocate(Gtk::Allocation& allocation) {
@@ -54,7 +62,7 @@ void BufferView::on_size_allocate(Gtk::Allocation& allocation) {
     num_lines = static_cast<size_t>(widgetHeight / textHeight) - 1;
     lines.erase(lines.begin(), lines.end());
 
-    vector<Buffer::Line> line_data = buffer->get_lines(visible_lines_offset, num_lines + visible_lines_offset + 1);
+    vector<Buffer::Line> line_data = buffer->get_lines(visible_lines_offset, num_lines + visible_lines_offset);
     for (const auto& line : line_data) {
         Glib::ustring text(line.rope.c_str());
         lines.push_back(create_pango_layout(text));
@@ -62,6 +70,9 @@ void BufferView::on_size_allocate(Gtk::Allocation& allocation) {
 }
 
 bool BufferView::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
+#ifdef DEBUG
+    window->eventStart(EtmeWindow::EventType::render);
+#endif
     cr->set_source_rgb(0 / 256.0, 43 / 256.0, 54 / 256.0);
     cr->rectangle(0, 0, widgetWidth, widgetHeight);
     cr->fill();
@@ -69,23 +80,36 @@ bool BufferView::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
     cr->set_source_rgb(131 / 256.0, 148 / 256.0, 150 / 256.0);
     cr->set_antialias(Cairo::ANTIALIAS_DEFAULT);
 
-    while (buffer->get_y() > num_lines + visible_lines_offset - 1) {
+    // TODO: if buffer->get_() == buffer->last_line()
+    while (buffer->get_y() + 1 > num_lines + visible_lines_offset - 1) {
         visible_lines_offset++;
         lines.erase(lines.begin());
-        Buffer::Line line = buffer->get_line(buffer->get_y());
+        Buffer::Line line = buffer->get_line(buffer->get_y() + 1);
         Glib::ustring text(line.rope.c_str());
         auto layout = create_pango_layout(text);
         lines.push_back(layout);
     }
 
-    while (buffer->get_y() < visible_lines_offset) {
-        visible_lines_offset--;
-        lines.erase(lines.end() - 1);
-        Buffer::Line line = buffer->get_line(buffer->get_y());
-        Glib::ustring text(line.rope.c_str());
-        auto layout = create_pango_layout(text);
-        lines.insert(lines.begin(), layout);
+    if (buffer->get_y() == 0) {
+        while (visible_lines_offset > 0) {
+            visible_lines_offset--;
+            lines.erase(lines.end() - 1);
+            Buffer::Line line = buffer->get_line(visible_lines_offset);
+            Glib::ustring text(line.rope.c_str());
+            auto layout = create_pango_layout(text);
+            lines.insert(lines.begin(), layout);
+        }
+    } else {
+        while (buffer->get_y() - 1 < visible_lines_offset) {
+            visible_lines_offset--;
+            lines.erase(lines.end() - 1);
+            Buffer::Line line = buffer->get_line(buffer->get_y() - 1);
+            Glib::ustring text(line.rope.c_str());
+            auto layout = create_pango_layout(text);
+            lines.insert(lines.begin(), layout);
+        }
     }
+
 
     int i = 0;
     for (const auto& line : lines) {
@@ -117,6 +141,11 @@ bool BufferView::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
     cursor_pos_layout->get_size(cursor_pos_width, cursor_pos_height);
     cr->move_to(widgetWidth - (cursor_pos_width / Pango::SCALE), widgetHeight - textHeight);
     cursor_pos_layout->show_in_cairo_context(cr);
+
+#ifdef DEBUG
+    window->eventEnd(EtmeWindow::EventType::render);
+    window->eventEnd(EtmeWindow::EventType::total);
+#endif
 
     return true;
 }
@@ -152,11 +181,11 @@ void BufferView::ins(char c) {
         Buffer::Line line_data = buffer->get_line(buffer->get_y());
         Glib::ustring text(line_data.rope.c_str());
         auto layout = create_pango_layout(text);
-        lines.insert(lines.begin() + buffer->get_y(), layout);
+        lines.insert(lines.begin() + buffer->get_y() - visible_lines_offset, layout);
         lines.pop_back();
         Buffer::Line line_data_2 = buffer->get_line(buffer->get_y() - 1);
         Glib::ustring text_2(line_data_2.rope.c_str());
-        lines[buffer->get_y() - 1]->set_text(text_2);
+        lines[buffer->get_y() - 1 - visible_lines_offset]->set_text(text_2);
     }
 }
 
