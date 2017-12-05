@@ -4,36 +4,13 @@
 
 Buffer::Buffer() : cursor(0, 0), filename("*scratch*") {
     rope = new crope();
-    line_boundaries = new LineBoundaries(rope->begin(), rope->end());
+    line_boundaries = new LineBoundaries(128, rope->begin(), rope->end());
 }
-
-// TODO: Better error handeling
-class file_char_prod : public char_producer<char> {
-public:
-    FILE* f;
-
-    explicit file_char_prod(const char* file_name) {
-        if (nullptr == (f = fopen(file_name, "rb")))
-            exit(1);
-    }
-
-    ~file_char_prod() override { fclose(f); }
-
-    void operator()(size_t start_pos, size_t len, char* buffer) override {
-        if (fseek(f, start_pos, SEEK_SET)) exit(1);
-        if (fread(buffer, sizeof(char), len, f) < len) exit(1);
-    }
-
-    size_t len() {
-        if (fseek(f, 0, SEEK_END)) exit(1);
-        return static_cast<size_t>(ftell(f));
-    }
-};
 
 Buffer::Buffer(const char* filename) : cursor(0, 0), filename(filename) {
     auto *fcp = new file_char_prod(filename);
     rope = new crope(fcp, fcp->len(), true);
-    line_boundaries = new LineBoundaries(rope->begin(), rope->end());
+    line_boundaries = new LineBoundaries(128, rope->begin(), rope->end());
 }
 
 Buffer::~Buffer() {
@@ -103,7 +80,7 @@ bool Buffer::insert(string s) {
     rope->insert(get_idx(), s.c_str());
     size_t firstNl = s.find('\n');
     if (firstNl != string::npos) {
-        line_boundaries->lengthen(get_y(), firstNl);
+        line_boundaries->lengthen(get_y(), static_cast<int>(firstNl));
         while (true) {
             size_t nextNl = s.find('\n', firstNl + 1);
             if (nextNl == string::npos) {
@@ -117,7 +94,7 @@ bool Buffer::insert(string s) {
             ++cursor.y;
         }
     } else {
-        line_boundaries->lengthen(get_y(), s.size());
+        line_boundaries->lengthen(get_y(), static_cast<int>(s.size()));
         cursor.x += s.size();
         cursor.last_x = cursor.x;
         return false;
@@ -139,7 +116,7 @@ vector<Buffer::Line> Buffer::get_lines(size_t start, size_t num) {
 
 Buffer::Line Buffer::get_line(size_t y) {
     if (!line_boundaries->has(y)) {
-        line_boundaries->expand_boundary(*rope, true, y - line_boundaries->last_index());
+        line_boundaries->expand_boundary(*rope, LineBoundaries::Dir::END, y - line_boundaries->last_index());
     }
     crope r = rope->substr(line_boundaries->at(y).start_idx, line_boundaries->at(y).length);
     return {r, line_boundaries->at(y).start_idx};
@@ -199,7 +176,7 @@ void Buffer::up() {
 void Buffer::down() {
     // TODO: if cursor.y == last_line: return
     if (cursor.y == line_boundaries->last_index()) {
-        line_boundaries->expand_boundary(*rope, true, 1);
+        line_boundaries->expand_boundary(*rope, LineBoundaries::Dir::END, 1);
     }
     ++cursor.y;
     if (cursor.last_x < line_boundaries->at(get_y()).length) {
@@ -265,3 +242,14 @@ void Buffer::end_of_line() {
 bool Buffer::is_whitespace(char c) {
     return c == ' ' || c == '\t' || c == '\n' || c == '\r';
 }
+
+void Buffer::beginning_of_buffer() {
+    line_boundaries->beginning_of_buffer(*rope);
+    cursor.y = 0;
+    cursor.last_x = cursor.x = 0;
+}
+
+void Buffer::end_of_buffer() {
+
+}
+

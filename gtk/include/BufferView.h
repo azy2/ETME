@@ -27,6 +27,7 @@ private:
 
     bool control(GdkEventKey* key, guint c = 0);
     bool meta(GdkEventKey *key, guint c = 0);
+    bool control_meta(GdkEventKey* key, guint c = 0);
     bool shift(GdkEventKey* key, guint c = 0);
 
     void up(char c);

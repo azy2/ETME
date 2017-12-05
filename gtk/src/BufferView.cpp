@@ -41,6 +41,8 @@ void BufferView::key_press_event(GdkEventKey* event) {
         buffer->beginning_of_line();
     } else if (control(event, GDK_KEY_e)) {
         buffer->end_of_line();
+    } else if (meta(event, GDK_KEY_less)) {
+        buffer->beginning_of_buffer();
     } else if (event->keyval == GDK_KEY_BackSpace) {
         backspace(static_cast<char>(event->keyval));
     } else if (event->keyval >= 32 && event->keyval <= 126 && ((event->state & (GDK_CONTROL_MASK | GDK_MOD1_MASK)) == 0)) {
@@ -211,6 +213,11 @@ bool BufferView::control(GdkEventKey *key, guint c) {
 bool BufferView::meta(GdkEventKey *key, guint c) {
     bool meta = ((key->state & GDK_MOD1_MASK) == GDK_MOD1_MASK);
     return c != 0 ? meta && key->keyval == c : meta;
+}
+
+bool BufferView::control_meta(GdkEventKey* key, guint c) {
+    bool ctrl_meta = ((key->state & (GDK_CONTROL_MASK | GDK_MOD1_MASK)) == (GDK_CONTROL_MASK | GDK_MOD1_MASK));
+    return c != 0 ? ctrl_meta && key->keyval == c : ctrl_meta;
 }
 
 bool BufferView::shift(GdkEventKey *key, guint c) {

@@ -85,5 +85,7 @@ TEST_CASE( "forward_word" ) {
     buffer.beginning_of_line();
     REQUIRE(buffer.get_x() == 0);
     buffer.forward_word();
-    REQUIRE(buffer.get_x() == 5);
+    REQUIRE(buffer.get_x() == 4);
+    buffer.forward_word();
+    REQUIRE(buffer.get_x() == 9);
 }

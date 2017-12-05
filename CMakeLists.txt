@@ -9,7 +9,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -Wextra -pedantic -Wall -
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 set(CORE_INCLUDE_DIR core/include)
-set(CORE_HEADERS core/include/Buffer.h core/include/Cursor.h core/include/Optional.h core/include/LineBoundaries.h)
+set(CORE_HEADERS core/include/Buffer.h core/include/Cursor.h core/include/LineBoundaries.h)
 set(CORE_SRCS core/src/Buffer.cpp core/src/LineBoundaries.cpp)
 
 #find_package(LLVM REQUIRED CONFIG)
