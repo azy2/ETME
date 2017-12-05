@@ -57,6 +57,7 @@ public:
     crope::const_iterator begin();
     crope::const_iterator end();
     size_t length();
+    size_t num_lines();
     bool backspace();
     bool insert(char ch);
     bool insert(string s);
@@ -72,6 +73,7 @@ public:
     void end_of_buffer();
 
     vector<Line> get_lines(size_t start, size_t num);
+    vector<Line> get_lines_up_to(size_t start, size_t max_num);
     Line get_line(size_t y);
 
     const char* filename;

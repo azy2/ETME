@@ -4,13 +4,13 @@
 
 Buffer::Buffer() : cursor(0, 0), filename("*scratch*") {
     rope = new crope();
-    line_boundaries = new LineBoundaries(128, rope->begin(), rope->end());
+    line_boundaries = new LineBoundaries(*rope);
 }
 
 Buffer::Buffer(const char* filename) : cursor(0, 0), filename(filename) {
     auto *fcp = new file_char_prod(filename);
     rope = new crope(fcp, fcp->len(), true);
-    line_boundaries = new LineBoundaries(128, rope->begin(), rope->end());
+    line_boundaries = new LineBoundaries(*rope);
 }
 
 Buffer::~Buffer() {
@@ -114,10 +114,11 @@ vector<Buffer::Line> Buffer::get_lines(size_t start, size_t num) {
     return lines;
 }
 
+vector<Buffer::Line> Buffer::get_lines_up_to(size_t start, size_t max_num) {
+    return get_lines(start, min(line_boundaries->size() - start, max_num));
+}
+
 Buffer::Line Buffer::get_line(size_t y) {
-    if (!line_boundaries->has(y)) {
-        line_boundaries->expand_boundary(*rope, LineBoundaries::Dir::END, y - line_boundaries->last_index());
-    }
     crope r = rope->substr(line_boundaries->at(y).start_idx, line_boundaries->at(y).length);
     return {r, line_boundaries->at(y).start_idx};
 }
@@ -159,10 +160,6 @@ void Buffer::back(size_t n) {
 void Buffer::up() {
     if (cursor.y == 0) {
         return;
-    }
-    else if (cursor.y == line_boundaries->first_index()) {
-        assert(0 && "scrolling up into new text not implemented");
-//        line_boundaries->expand_boundary(*rope, false, 1);
     } else {
         --cursor.y;
         if (cursor.last_x < line_boundaries->at(get_y()).length) {
@@ -174,15 +171,15 @@ void Buffer::up() {
 }
 
 void Buffer::down() {
-    // TODO: if cursor.y == last_line: return
-    if (cursor.y == line_boundaries->last_index()) {
-        line_boundaries->expand_boundary(*rope, LineBoundaries::Dir::END, 1);
-    }
-    ++cursor.y;
-    if (cursor.last_x < line_boundaries->at(get_y()).length) {
-        cursor.x = cursor.last_x;
+    if (cursor.y == line_boundaries->size() - 1) {
+        return;
     } else {
-        cursor.x = line_boundaries->at(get_y()).length;
+        ++cursor.y;
+        if (cursor.last_x < line_boundaries->at(get_y()).length) {
+            cursor.x = cursor.last_x;
+        } else {
+            cursor.x = line_boundaries->at(get_y()).length;
+        }
     }
 }
 
@@ -244,12 +241,15 @@ bool Buffer::is_whitespace(char c) {
 }
 
 void Buffer::beginning_of_buffer() {
-    line_boundaries->beginning_of_buffer(*rope);
     cursor.y = 0;
     cursor.last_x = cursor.x = 0;
 }
 
 void Buffer::end_of_buffer() {
-
+    cursor.y = line_boundaries->size() - 1;
+    cursor.last_x = cursor.x = line_boundaries->at(cursor.y).length;
 }
 
+size_t Buffer::num_lines() {
+    return line_boundaries->size();
+}

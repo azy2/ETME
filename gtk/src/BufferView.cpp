@@ -64,7 +64,7 @@ void BufferView::on_size_allocate(Gtk::Allocation& allocation) {
     num_lines = static_cast<size_t>(widgetHeight / textHeight) - 1;
     lines.erase(lines.begin(), lines.end());
 
-    vector<Buffer::Line> line_data = buffer->get_lines(visible_lines_offset, num_lines + visible_lines_offset);
+    vector<Buffer::Line> line_data = buffer->get_lines_up_to(visible_lines_offset, num_lines + visible_lines_offset);
     for (const auto& line : line_data) {
         Glib::ustring text(line.rope.c_str());
         lines.push_back(create_pango_layout(text));

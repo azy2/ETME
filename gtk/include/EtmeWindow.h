@@ -12,7 +12,7 @@ public:
         set_title("ETME");
         add_events(Gdk::KEY_PRESS_MASK);
 
-        buffer = new Buffer("../core/test/files/war_and_peace.txt");
+        buffer = new Buffer("../core/test/files/small.txt");
 
         area = new BufferView(buffer, this);
 

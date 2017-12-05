@@ -65,8 +65,6 @@ TEST_CASE( "backspace" ) {
     auto line = buffer.get_line(0);
     REQUIRE(line.rope.compare(crope("13468")) == 0);
 }
-// 134
-// 68
 
 TEST_CASE( "back_word" ) {
     Buffer buffer;
