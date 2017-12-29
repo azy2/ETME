@@ -73,7 +73,7 @@ public:
     void end_of_buffer();
 
     vector<Line> get_lines(size_t start, size_t num);
-    vector<Line> get_lines_up_to(size_t start, size_t max_num);
+
     Line get_line(size_t y);
 
     const char* filename;

@@ -3,19 +3,19 @@
 LineBoundaries::LineBoundaries(const crope& rope) {
     if (rope.begin() == rope.end()) {
         LineBoundary empty = {0, 0};
-        line_boundaries.push_back(empty);
+        push_back(empty);
     }
     size_t l = 0;
     size_t start = 0;
     for (auto it = rope.begin(), end = rope.end(); it < end; ++it) {
         if (*it == '\n') {
             LineBoundary lineBoundary = {start, l};
-            line_boundaries.push_back(lineBoundary);
+            push_back(lineBoundary);
             start += l + 1;
             l = 0;
-            ++it;
+        } else {
+            ++l;
         }
-        ++l;
     }
 }
 
@@ -52,4 +52,8 @@ void LineBoundaries::insert(size_t pos, size_t length) {
 
 size_t LineBoundaries::size() {
     return line_boundaries.size();
+}
+
+void LineBoundaries::push_back(const LineBoundaries::LineBoundary &value) {
+    line_boundaries.push_back(value);
 }

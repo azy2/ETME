@@ -8,7 +8,7 @@ Buffer::Buffer() : cursor(0, 0), filename("*scratch*") {
 }
 
 Buffer::Buffer(const char* filename) : cursor(0, 0), filename(filename) {
-    auto *fcp = new file_char_prod(filename);
+    auto *fcp = new Buffer::file_char_prod(filename);
     rope = new crope(fcp, fcp->len(), true);
     line_boundaries = new LineBoundaries(*rope);
 }
@@ -114,10 +114,6 @@ vector<Buffer::Line> Buffer::get_lines(size_t start, size_t num) {
     return lines;
 }
 
-vector<Buffer::Line> Buffer::get_lines_up_to(size_t start, size_t max_num) {
-    return get_lines(start, min(line_boundaries->size() - start, max_num));
-}
-
 Buffer::Line Buffer::get_line(size_t y) {
     crope r = rope->substr(line_boundaries->at(y).start_idx, line_boundaries->at(y).length);
     return {r, line_boundaries->at(y).start_idx};
@@ -130,7 +126,7 @@ const crope &Buffer::get_rope() {
 // NOTE: don't use this for far jumps. It is inefficient.
 void Buffer::forward(size_t n) {
     for (size_t i = 0; i < n; i++) {
-        if (get_idx() < this->length()) {
+        if (get_idx() < this->length() - 1) {
             if (get_x() + 1 > line_boundaries->at(cursor.y).length) {
                 cursor.x = 0;
                 ++cursor.y;

@@ -2,6 +2,7 @@
 #define ETME_ETMEWINDOW_H
 
 #include <gtkmm/window.h>
+#include <iostream>
 #include "Buffer.h"
 #include "BufferView.h"
 
@@ -12,7 +13,7 @@ public:
         set_title("ETME");
         add_events(Gdk::KEY_PRESS_MASK);
 
-        buffer = new Buffer("../core/test/files/small.txt");
+        buffer = new Buffer("../core/test/files/war_and_peace.txt");
 
         area = new BufferView(buffer, this);
 

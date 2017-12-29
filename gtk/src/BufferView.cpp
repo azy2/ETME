@@ -7,7 +7,7 @@ BufferView::BufferView(Buffer* buffer, EtmeWindow* window) : buffer(buffer), win
     widgetWidth = 0;
     widgetHeight = 0;
     font.set_family("DejaVu Sans Mono");
-    font.set_size(13 * PANGO_SCALE);
+    font.set_size(14 * PANGO_SCALE);
     auto context = get_pango_context();
     context->set_font_description(font);
     auto layout = create_pango_layout("a");
@@ -26,13 +26,13 @@ void BufferView::key_press_event(GdkEventKey* event) {
     window->eventStart(EtmeWindow::EventType::total);
 #endif
     if (event->keyval == GDK_KEY_Up || control(event, GDK_KEY_p)) {
-        up(static_cast<char>(event->keyval));
+        buffer->up();
     } else if (event->keyval == GDK_KEY_Down || control(event, GDK_KEY_n)) {
-        down(static_cast<char>(event->keyval));
+        buffer->down();
     } else if (event->keyval == GDK_KEY_Left || control(event, GDK_KEY_b)) {
-        left(static_cast<char>(event->keyval));
+        buffer->back();
     } else if (event->keyval == GDK_KEY_Right || control(event, GDK_KEY_f)) {
-        right(static_cast<char>(event->keyval));
+        buffer->forward();
     } else if (meta(event, GDK_KEY_b)) {
         buffer->back_word();
     } else if (meta(event, GDK_KEY_f)) {
@@ -43,12 +43,14 @@ void BufferView::key_press_event(GdkEventKey* event) {
         buffer->end_of_line();
     } else if (meta(event, GDK_KEY_less)) {
         buffer->beginning_of_buffer();
+    } else if (meta(event, GDK_KEY_greater)) {
+        buffer->end_of_buffer();
     } else if (event->keyval == GDK_KEY_BackSpace) {
-        backspace(static_cast<char>(event->keyval));
+        buffer->backspace();
     } else if (event->keyval >= 32 && event->keyval <= 126 && ((event->state & (GDK_CONTROL_MASK | GDK_MOD1_MASK)) == 0)) {
-        ins(static_cast<char>(event->keyval));
+        buffer->insert(static_cast<char>(event->keyval));
     } else if (event->keyval == GDK_KEY_Return) {
-        ins('\n');
+        buffer->insert('\n');
     }
     this->queue_draw();
 #ifdef DEBUG
@@ -61,14 +63,8 @@ void BufferView::on_size_allocate(Gtk::Allocation& allocation) {
     widgetWidth = allocation.get_width();
     widgetHeight = allocation.get_height();
 
-    num_lines = static_cast<size_t>(widgetHeight / textHeight) - 1;
-    lines.erase(lines.begin(), lines.end());
-
-    vector<Buffer::Line> line_data = buffer->get_lines_up_to(visible_lines_offset, num_lines + visible_lines_offset);
-    for (const auto& line : line_data) {
-        Glib::ustring text(line.rope.c_str());
-        lines.push_back(create_pango_layout(text));
-    }
+    total_lines = static_cast<size_t>(widgetHeight / textHeight) - 1;
+    num_lines = min(total_lines, buffer->num_lines() - visible_lines_offset);
 }
 
 bool BufferView::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
@@ -82,41 +78,20 @@ bool BufferView::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
     cr->set_source_rgb(131 / 256.0, 148 / 256.0, 150 / 256.0);
     cr->set_antialias(Cairo::ANTIALIAS_DEFAULT);
 
-    // TODO: if buffer->get_() == buffer->last_line()
-    while (buffer->get_y() + 1 > num_lines + visible_lines_offset - 1) {
-        visible_lines_offset++;
-        lines.erase(lines.begin());
-        Buffer::Line line = buffer->get_line(buffer->get_y() + 1);
-        Glib::ustring text(line.rope.c_str());
-        auto layout = create_pango_layout(text);
-        lines.push_back(layout);
+    if (buffer->get_y() < visible_lines_offset) {
+        visible_lines_offset = buffer->get_y();
+    } else if (buffer->get_y() > visible_lines_offset + num_lines - 1) {
+        visible_lines_offset = buffer->get_y() - num_lines + 1;
     }
-
-    if (buffer->get_y() == 0) {
-        while (visible_lines_offset > 0) {
-            visible_lines_offset--;
-            lines.erase(lines.end() - 1);
-            Buffer::Line line = buffer->get_line(visible_lines_offset);
-            Glib::ustring text(line.rope.c_str());
-            auto layout = create_pango_layout(text);
-            lines.insert(lines.begin(), layout);
-        }
-    } else {
-        while (buffer->get_y() - 1 < visible_lines_offset) {
-            visible_lines_offset--;
-            lines.erase(lines.end() - 1);
-            Buffer::Line line = buffer->get_line(buffer->get_y() - 1);
-            Glib::ustring text(line.rope.c_str());
-            auto layout = create_pango_layout(text);
-            lines.insert(lines.begin(), layout);
-        }
-    }
-
 
     int i = 0;
-    for (const auto& line : lines) {
+    vector<Buffer::Line> line_data = buffer->get_lines(visible_lines_offset, num_lines);
+    for (const auto& line : line_data) {
+        Glib::ustring text(line.rope.c_str());
+        auto layout = create_pango_layout(text);
+
         cr->move_to(0, textHeight * i);
-        line->show_in_cairo_context(cr);
+        layout->show_in_cairo_context(cr);
         ++i;
     }
 
@@ -150,59 +125,6 @@ bool BufferView::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
 #endif
 
     return true;
-}
-
-void BufferView::up(char c) {
-    (void)c;
-    buffer->up();
-}
-
-void BufferView::down(char c) {
-    (void)c;
-    buffer->down();
-}
-
-void BufferView::right(char c) {
-    (void)c;
-    buffer->forward();
-}
-
-void BufferView::left(char c) {
-    (void)c;
-    buffer->back();
-}
-
-void BufferView::ins(char c) {
-    if (c != '\n') {
-        buffer->insert(c);
-        Buffer::Line line_data = buffer->get_line(buffer->get_y());
-        Glib::ustring text(line_data.rope.c_str());
-        lines[buffer->get_y()]->set_text(text);
-    } else {
-        buffer->insert('\n');
-        Buffer::Line line_data = buffer->get_line(buffer->get_y());
-        Glib::ustring text(line_data.rope.c_str());
-        auto layout = create_pango_layout(text);
-        lines.insert(lines.begin() + buffer->get_y() - visible_lines_offset, layout);
-        lines.pop_back();
-        Buffer::Line line_data_2 = buffer->get_line(buffer->get_y() - 1);
-        Glib::ustring text_2(line_data_2.rope.c_str());
-        lines[buffer->get_y() - 1 - visible_lines_offset]->set_text(text_2);
-    }
-}
-
-void BufferView::backspace(char c) {
-    (void)c;
-    if (buffer->backspace()) {
-        lines.erase(lines.begin() + buffer->get_y() + 1);
-        Buffer::Line newLine = buffer->get_line(lines.size());
-        Glib::ustring text(newLine.rope.c_str());
-        auto layout = create_pango_layout(text);
-        lines.push_back(layout);
-    }
-    Buffer::Line line_data = buffer->get_line(buffer->get_y());
-    Glib::ustring text(line_data.rope.c_str());
-    lines[buffer->get_y()]->set_text(text);
 }
 
 bool BufferView::control(GdkEventKey *key, guint c) {

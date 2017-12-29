@@ -20,6 +20,8 @@ public:
 
 private:
     vector<LineBoundary> line_boundaries;
+
+    void push_back(const LineBoundary& value);
 };
 
 #endif //ETME_LINEBOUNDARIES_H

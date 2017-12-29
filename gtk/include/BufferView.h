@@ -21,21 +21,14 @@ private:
     Buffer* buffer;
     int widgetWidth, widgetHeight, textWidth, textHeight;
     size_t num_lines;
+    size_t total_lines;
     Pango::FontDescription font;
-    vector<Glib::RefPtr<Pango::Layout>> lines;
     size_t visible_lines_offset;
 
     bool control(GdkEventKey* key, guint c = 0);
     bool meta(GdkEventKey *key, guint c = 0);
     bool control_meta(GdkEventKey* key, guint c = 0);
     bool shift(GdkEventKey* key, guint c = 0);
-
-    void up(char c);
-    void down(char c);
-    void right(char c);
-    void left(char c);
-    void ins(char c);
-    void backspace(char c);
 
     class EtmeWindow* window;
 };
